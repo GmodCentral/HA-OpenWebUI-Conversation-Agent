@@ -11,19 +11,9 @@ This integration allows Home Assistant to directly communicate with OpenWebUI as
 
 ## Configuration
 
-You must configure your OpenWebUI API endpoint and model via `configuration.yaml`:
-
-```yaml
-openwebui_agent:
-  url: "http://<openwebui_ip>:3000/api/v1/chat/completions"
-  model: "your-openwebui-model-name"
-```
-
-Replace placeholders:
-- `<openwebui_ip>`: IP address or hostname of your OpenWebUI server.
-- `your-openwebui-model-name`: Name of your OpenWebUI model.
-
-Restart Home Assistant after saving these changes.
+- Add the integration from the Home Assistant UI (Integrations page, "Add Integration" → "OpenWebUI Agent").
+- Enter your OpenWebUI API endpoint and model name in the setup form.
+- No YAML or code edits needed!
 
 ## Usage
 
