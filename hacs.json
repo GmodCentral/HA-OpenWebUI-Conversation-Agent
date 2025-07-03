@@ -1,7 +1,6 @@
 {
-    "name": "OpenWebUI Conversation",
-    "filename": "openwebui_conversation.zip",
-    "hide_default_branch": true,
-    "homeassistant": "2024.12.5",
-    "zip_release": true
+  "name": "OpenWebUI Conversation",
+  "render_readme": true,
+  "filename": "README.md",
+  "content_in_root": false
 }
