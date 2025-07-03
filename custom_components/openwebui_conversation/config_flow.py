@@ -80,7 +80,7 @@ DEFAULT_OPTIONS = types.MappingProxyType(
 )
 
 
-class OpenWebUIConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+class OpenWebUIConversationConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for OpenWebUI Conversation."""
 
     VERSION = 1
