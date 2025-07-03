@@ -71,21 +71,23 @@ class OpenWebUIApiClient:
         """Get information from the API."""
         try:
             async with async_timeout.timeout(self.timeout):
-                response = await self._session.request(
-                    method=method,
-                    url=url,
-                    headers=headers,
-                    json=data,
-                    verify_ssl=self._verify_ssl,
-                )
-
-                if response.status == 404 and decode_json:
-                    json = await response.json()
-                    raise ApiJsonError(json["error"])
-
+        import aiohttp
+        url = f"{self._api_url}/api/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": model,
+            "messages": messages
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=payload, timeout=60) as response:
                 response.raise_for_status()
-
-                if decode_json:
+                data = await response.json()
+                # For debug: print("RESPONSE DATA:", data)
+                return data["choices"][0]["message"]["content"]
+        
                     return await response.json()
                 return await response.text()
         except ApiJsonError as e:
