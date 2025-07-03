@@ -4,20 +4,29 @@ This integration allows Home Assistant to directly communicate with OpenWebUI as
 
 ## Installation (via HACS)
 
-1. Go to HACS → Integrations → Custom repositories
-2. Add the URL of this GitHub repository and select type "Integration".
-3. Click "Add".
+1. In Home Assistant, navigate to HACS → Integrations → Custom repositories.
+2. Add the URL of this repository and select type "Integration."
+3. Click "Add," then "Download."
 4. Restart Home Assistant.
-5. Navigate to Home Assistant → Assist and select "OpenWebUI Agent" as your active conversation agent.
 
 ## Configuration
 
-No additional YAML required. Your OpenWebUI API endpoint and model should be directly edited in:
+You must configure your OpenWebUI API endpoint and model via `configuration.yaml`:
 
-`custom_components/openwebui_agent/__init__.py`
+```yaml
+openwebui_agent:
+  url: "http://<openwebui_ip>:3000/api/v1/chat/completions"
+  model: "your-openwebui-model-name"
+```
 
 Replace placeholders:
-- `<openwebui_ip>`
-- `your-openwebui-model-name`
+- `<openwebui_ip>`: IP address or hostname of your OpenWebUI server.
+- `your-openwebui-model-name`: Name of your OpenWebUI model.
 
-Restart Home Assistant after changes.
+Restart Home Assistant after saving these changes.
+
+## Usage
+
+Navigate to Home Assistant → Assist and select "OpenWebUI Agent" as your active conversation agent.
+
+Enjoy!
