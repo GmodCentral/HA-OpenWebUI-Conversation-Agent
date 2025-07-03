@@ -1,0 +1,16 @@
+{
+  "title": "Letta Conversation Integration",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure Letta",
+        "data": {
+          "url": "Base URL",
+          "agent_id": "Agent ID",
+          "password": "Password",
+          "api_key": "Auth Key"
+        }
+      }
+    }
+  }
+}

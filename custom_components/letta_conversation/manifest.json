@@ -1,0 +1,14 @@
+{
+  "domain": "letta_conversation",
+  "name": "Letta Conversation",
+  "documentation": "https://github.com/yourusername/letta-conversation#readme",
+  "issue_tracker": "https://github.com/yourusername/letta-conversation/issues",
+  "requirements": [
+    "aiohttp>=3.8.0"
+  ],
+  "dependencies": [],
+  "codeowners": [
+    "@yourgithubusername"
+  ],
+  "version": "1.0.0"
+}

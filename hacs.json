@@ -1,5 +1,15 @@
 {
-  "name": "Letta_Conversation_Agent",
+  "name": "Letta Conversation",
+  "content_in_root": false,
+  "filename": "README.md",
   "render_readme": true,
-  "homeassistant": "2024.1.0b0"
+  "zip_release": false,
+  "changelog": "CHANGELOG.md",
+  "tags": [
+    "AI",
+    "conversation"
+  ],
+  "release_branches": [
+    "main"
+  ]
 }

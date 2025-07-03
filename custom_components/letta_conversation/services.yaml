@@ -1,0 +1,7 @@
+query_letta:
+  name: Query Letta
+  description: Send a message to Letta and get a streamed response
+  fields:
+    prompt:
+      description: The text to send to Letta
+      example: "Hello, Letta!"
