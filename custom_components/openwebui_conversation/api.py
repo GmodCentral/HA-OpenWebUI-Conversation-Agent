@@ -45,25 +45,20 @@ class OpenWebUIApiClient:
             },
         )
 
-    import logging
-    _LOGGER = logging.getLogger(__name__)
-
     async def async_generate(
         self,
         data: dict | None = None,
     ) -> any:
-    """Generate a completion from the API."""
-    _LOGGER.error(f"OPENWEBUI DEBUG async_generate data: {data}")
-    return await self._api_wrapper(
-        method="post",
-        url=f"{self._base_url}/api/chat/completions",
-        data=data,
-        headers={
-            "Content-type": "application/json; charset=UTF-8",
-            "Authorization": f"Bearer {self._api_key}",
-        },
-    )
-
+        """Generate a completion from the API."""
+        return await self._api_wrapper(
+            method="post",
+            url=f"{self._base_url}/api/chat/completions",
+            data=data,
+            headers={
+                "Content-type": "application/json; charset=UTF-8",
+                "Authorization": f"Bearer {self._api_key}",
+            },
+        )
 
     async def _api_wrapper(
         self,
