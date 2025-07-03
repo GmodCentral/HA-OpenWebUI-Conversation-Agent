@@ -1,7 +1,7 @@
 import logging
 import requests
 from homeassistant.components.conversation import agent
-from .const import DOMAIN, CONF_URL, CONF_MODEL, CONF_AUTH_KEY
+from .const import CONF_URL, CONF_MODEL, CONF_AUTH_KEY
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 {
   "domain": "openwebui_agent",
   "name": "OpenWebUI Agent",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "config_flow": true,
   "documentation": "https://github.com/yourusername/your-openwebui-agent-repo",
   "requirements": ["requests"],
