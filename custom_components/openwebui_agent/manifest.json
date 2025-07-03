@@ -1,0 +1,11 @@
+{
+  "domain": "openwebui_agent",
+  "name": "OpenWebUI Agent",
+  "version": "1.0.0",
+  "config_flow": false,
+  "documentation": "https://github.com/yourusername/your-openwebui-agent-repo",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": ["@yourusername"],
+  "iot_class": "cloud_polling"
+}

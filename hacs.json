@@ -1,0 +1,6 @@
+{
+  "name": "OpenWebUI Agent",
+  "render_readme": true,
+  "filename": "README.md",
+  "content_in_root": false
+}
