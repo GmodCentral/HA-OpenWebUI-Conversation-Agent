@@ -12,7 +12,7 @@ This integration allows Home Assistant to directly communicate with OpenWebUI as
 ## Configuration
 
 - Add the integration from the Home Assistant UI (Integrations page, "Add Integration" → "OpenWebUI Agent").
-- Enter your OpenWebUI API endpoint and model name in the setup form.
+- Enter your OpenWebUI API endpoint, model name, and Authorization Key (Bearer token) in the setup form.
 - No YAML or code edits needed!
 
 ## Usage

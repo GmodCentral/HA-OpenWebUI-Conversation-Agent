@@ -6,7 +6,8 @@
         "description": "Configure your OpenWebUI API connection.",
         "data": {
           "url": "OpenWebUI API URL",
-          "model": "Model name"
+          "model": "Model name",
+          "auth_key": "Authorization Key (Bearer Token)"
         }
       }
     }

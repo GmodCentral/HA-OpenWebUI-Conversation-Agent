@@ -1,30 +1,32 @@
 import logging
 import requests
 from homeassistant.components.conversation import agent
-from .const import DOMAIN, CONF_URL, CONF_MODEL
+from .const import DOMAIN, CONF_URL, CONF_MODEL, CONF_AUTH_KEY
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_agent(hass, config):
-    entry = config
+async def async_get_agent(hass, entry):
     url = entry.data[CONF_URL]
     model = entry.data[CONF_MODEL]
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN]["agent"] = OpenWebUIAgent(hass, url, model)
-    return hass.data[DOMAIN]["agent"]
+    auth_key = entry.data[CONF_AUTH_KEY]
+    return OpenWebUIAgent(hass, url, model, auth_key)
 
 class OpenWebUIAgent(agent.AbstractConversationAgent):
-    def __init__(self, hass, api_url, model):
+    def __init__(self, hass, api_url, model, auth_key):
         self.hass = hass
         self.api_url = api_url
         self.model = model
+        self.auth_key = auth_key
 
     @property
     def supported_languages(self):
         return ["en"]
 
     async def async_process(self, user_input: agent.ConversationInput) -> agent.ConversationResult:
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.auth_key}",
+        }
         payload = {
             "model": self.model,
             "messages": [{"role": "user", "content": user_input.text}],

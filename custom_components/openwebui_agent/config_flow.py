@@ -1,6 +1,6 @@
 from homeassistant import config_entries
 import voluptuous as vol
-from .const import DOMAIN, CONF_URL, CONF_MODEL
+from .const import DOMAIN, CONF_URL, CONF_MODEL, CONF_AUTH_KEY
 
 class OpenWebUIConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
@@ -12,5 +12,6 @@ class OpenWebUIConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schema = vol.Schema({
             vol.Required(CONF_URL): str,
             vol.Required(CONF_MODEL): str,
+            vol.Required(CONF_AUTH_KEY): str,
         })
         return self.async_show_form(step_id="user", data_schema=schema, errors=errors)
