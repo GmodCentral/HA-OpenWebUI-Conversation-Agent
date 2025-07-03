@@ -45,20 +45,25 @@ class OpenWebUIApiClient:
             },
         )
 
+    import logging
+    _LOGGER = logging.getLogger(__name__)
+
     async def async_generate(
         self,
         data: dict | None = None,
     ) -> any:
-        """Generate a completion from the API."""
-        return await self._api_wrapper(
-            method="post",
-            url=f"{self._base_url}/api/chat/completions",
-            data=data,
-            headers={
-                "Content-type": "application/json; charset=UTF-8",
-                "Authorization": f"Bearer {self._api_key}",
-            },
-        )
+    """Generate a completion from the API."""
+    _LOGGER.error(f"OPENWEBUI DEBUG async_generate data: {data}")
+    return await self._api_wrapper(
+        method="post",
+        url=f"{self._base_url}/api/chat/completions",
+        data=data,
+        headers={
+            "Content-type": "application/json; charset=UTF-8",
+            "Authorization": f"Bearer {self._api_key}",
+        },
+    )
+
 
     async def _api_wrapper(
         self,
@@ -71,23 +76,21 @@ class OpenWebUIApiClient:
         """Get information from the API."""
         try:
             async with async_timeout.timeout(self.timeout):
-        import aiohttp
-        url = f"{self._api_url}/api/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {self._api_key}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": model,
-            "messages": messages
-        }
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json=payload, timeout=60) as response:
+                response = await self._session.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    json=data,
+                    verify_ssl=self._verify_ssl,
+                )
+
+                if response.status == 404 and decode_json:
+                    json = await response.json()
+                    raise ApiJsonError(json["error"])
+
                 response.raise_for_status()
-                data = await response.json()
-                # For debug: print("RESPONSE DATA:", data)
-                return data["choices"][0]["message"]["content"]
-        
+
+                if decode_json:
                     return await response.json()
                 return await response.text()
         except ApiJsonError as e:
