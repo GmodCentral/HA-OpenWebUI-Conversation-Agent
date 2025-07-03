@@ -1,7 +1,6 @@
+import aiohttp
 import logging
 import voluptuous as vol
-import httpx
-
 from homeassistant.core import (
     HomeAssistant,
     ServiceCall,
@@ -12,79 +11,70 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv, selector
 from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN, SERVICE_QUERY_IMAGE
+DOMAIN = "extended_openai_conversation"
 
-QUERY_IMAGE_SCHEMA = vol.Schema(
-    {
-        vol.Required("config_entry"): selector.ConfigEntrySelector(
-            {
-                "integration": DOMAIN,
-            }
-        ),
-        vol.Required("prompt"): cv.string,
-    }
-)
+LETT_API_URL = "https://letta.avcompute.com/v1/agents/agent-83fb49e0-29d8-4faa-84f5-22549782042f/messages/stream"
+AUTHORIZATION_TOKEN = "Admin980845-"  # Should ideally come from secure storage
+PASSWORD_HEADER = "password Admin980845-"  # Should ideally come from secure storage
 
 _LOGGER = logging.getLogger(__package__)
 
+QUERY_SCHEMA = vol.Schema(
+    {
+        vol.Required("prompt"): cv.string,
+        vol.Optional("max_tokens", default=300): cv.positive_int,
+    }
+)
+
 async def async_setup_services(hass: HomeAssistant, config: ConfigType) -> None:
-    """Set up services for the extended openai conversation component."""
 
-    async def query_image(call: ServiceCall) -> ServiceResponse:
-        """Query Letta backend for a text response."""
-        # HARDCODED values for now!
-        auth_key = "Admin980845-"
-        password = "Admin980845-"
-        url = "letta.avcompute.com"
-        agent_id = "agent-83fb49e0-29d8-4faa-84f5-22549782042f"
+    async def query_letta(call: ServiceCall) -> ServiceResponse:
+        prompt = call.data["prompt"]
+        max_tokens = call.data.get("max_tokens", 300)
 
-        endpoint = f"https://{url}/v1/agents/{agent_id}/messages/stream"
         headers = {
-            "Authorization": f"Bearer {auth_key}",
-            "X-BARE-PASSWORD": f"password {password}",
+            "Authorization": f"Bearer {AUTHORIZATION_TOKEN}",
+            "X-BARE-PASSWORD": PASSWORD_HEADER,
             "Content-Type": "application/json",
-            "Accept": "text/event-stream"
+            "Accept": "text/event-stream",
         }
-        data = {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": call.data["prompt"]
-                }
-            ],
+
+        body = {
+            "messages": [{"role": "user", "content": prompt}],
             "stream_steps": True,
-            "stream_tokens": True
+            "stream_tokens": True,
         }
 
+        response_text = ""
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
-                resp = await client.post(endpoint, headers=headers, json=data)
-                full_content = ""
-                for raw_line in resp.iter_lines():
-                    if raw_line.startswith(b"data:"):
-                        line = raw_line[5:].strip()
-                        try:
-                            import json as _json
-                            data_json = _json.loads(line)
-                            # Prefer 'content', fall back to 'reasoning'
-                            if 'content' in data_json and data_json['content']:
-                                full_content += data_json['content']
-                            elif 'reasoning' in data_json and data_json['reasoning']:
-                                full_content += data_json['reasoning']
-                        except Exception:
-                            continue
+            async with aiohttp.ClientSession() as session:
+                async with session.post(LETT_API_URL, json=body, headers=headers) as resp:
+                    if resp.status != 200:
+                        raise HomeAssistantError(f"API Error: {resp.status}")
 
-            response_dict = {"content": full_content}
-            _LOGGER.info("Letta response: %s", response_dict)
-            return response_dict
+                    async for line in resp.content:
+                        decoded_line = line.decode("utf-8").strip()
+                        if decoded_line.startswith("data: "):
+                            data = decoded_line[6:]
+                            if data == "[DONE]":
+                                break
+                            message = json.loads(data)
+                            if "reasoning" in message:
+                                response_text += message["reasoning"]
+                            elif "content" in message:
+                                response_text += message["content"]
+
+            _LOGGER.info("Final response from Letta: %s", response_text)
 
         except Exception as err:
-            raise HomeAssistantError(f"Error communicating with Letta API: {err}") from err
+            raise HomeAssistantError(f"Error communicating with Letta: {err}") from err
+
+        return {"response": response_text}
 
     hass.services.async_register(
         DOMAIN,
-        SERVICE_QUERY_IMAGE,
-        query_image,
-        schema=QUERY_IMAGE_SCHEMA,
+        "query_letta",
+        query_letta,
+        schema=QUERY_SCHEMA,
         supports_response=SupportsResponse.ONLY,
     )
