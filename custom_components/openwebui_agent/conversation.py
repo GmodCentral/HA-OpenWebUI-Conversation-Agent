@@ -1,9 +1,11 @@
 import logging
 import requests
-from homeassistant.components.conversation import agent
+from homeassistant.components.conversation import agent, DISCOVERY_SCHEMA
 from .const import CONF_URL, CONF_MODEL, CONF_AUTH_KEY
 
 _LOGGER = logging.getLogger(__name__)
+
+PLATFORM_SCHEMA = DISCOVERY_SCHEMA
 
 async def async_get_agent(hass, entry):
     url = entry.data[CONF_URL]
