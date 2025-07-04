@@ -4,9 +4,13 @@ import logging
 import voluptuous as vol
 
 from homeassistant.const import CONF_URL, CONF_PASSWORD, CONF_API_KEY
-from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.components.conversation import AbstractConversationAgent, ConversationResult
+from homeassistant.components.conversation import (
+    AbstractConversationAgent,
+    ConversationResult,
+    ConversationResponse,
+)
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, CONF_AGENT_ID
@@ -16,7 +20,6 @@ _LOGGER = logging.getLogger(__name__)
 class LettaConversationAgent(AbstractConversationAgent):
     @property
     def supported_languages(self) -> list[str]:
-        """Return list of supported languages."""
         return ["en"]
 
     def __init__(self, hass: HomeAssistant, config: dict) -> None:
@@ -24,7 +27,7 @@ class LettaConversationAgent(AbstractConversationAgent):
         self.config = config
 
     async def async_process(self, user_input) -> ConversationResult:
-        """Process user input and return Letta's response."""
+        # Call our query service
         result = await self.hass.services.async_call(
             DOMAIN,
             "query_letta",
@@ -32,19 +35,21 @@ class LettaConversationAgent(AbstractConversationAgent):
             blocking=True,
             return_response=True,
         )
-        # Handle service response, could be list or dict
-        response = ""
+        # Normalize result
         if isinstance(result, list) and result:
-            response = result[0].get("response", "")
+            raw = result[0].get("response", "")
         elif isinstance(result, dict):
-            response = result.get("response", "")
-        return ConversationResult(response)
-
+            raw = result.get("response", "")
+        else:
+            raw = ""
+        # Wrap in ConversationResponse for HA
+        resp = ConversationResponse(text=raw)
+        return ConversationResult(response=resp)
 
 def register_services(hass: HomeAssistant, config: dict) -> None:
     """Register the `query_letta` service."""
     async def query_letta(call: ServiceCall) -> dict:
-        prompt = call.data.get("prompt", "")
+        prompt = call.data["prompt"]
         url = f"{config[CONF_URL]}/v1/agents/{config[CONF_AGENT_ID]}/messages/stream"
 
         headers = {
@@ -56,7 +61,7 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
         body = {
             "messages": [{"role": "user", "content": prompt}],
             "stream_steps": True,
-            "stream_tokens": True
+            "stream_tokens": True,
         }
 
         response_text = ""
@@ -86,5 +91,4 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
         "query_letta",
         query_letta,
         schema=schema,
-        supports_response=SupportsResponse.ONLY,
     )
