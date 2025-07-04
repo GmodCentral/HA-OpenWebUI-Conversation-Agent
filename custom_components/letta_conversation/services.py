@@ -1,3 +1,5 @@
+# custom_components/letta_conversation/services.py
+
 import aiohttp
 import json
 import logging
@@ -16,7 +18,13 @@ class LettaConversationAgent(AbstractConversationAgent):
         self.hass = hass
         self.config = config
 
+    @property
+    def supported_languages(self) -> list[str]:
+        """Return list of supported languages."""
+        return ["en"]
+
     async def async_process(self, user_input) -> ConversationResult:
+        """Process user input and return Letta's response."""
         result = await self.hass.services.async_call(
             DOMAIN,
             "query_letta",
@@ -27,7 +35,9 @@ class LettaConversationAgent(AbstractConversationAgent):
         response = result[0].get("response", "")
         return ConversationResult(response)
 
+
 def register_services(hass: HomeAssistant, config: dict) -> None:
+    """Register the `query_letta` service."""
     async def query_letta(call: ServiceCall) -> dict:
         prompt = call.data.get("prompt", "")
         url = f"{config[CONF_URL]}/v1/agents/{config[CONF_AGENT_ID]}/messages/stream"
@@ -38,7 +48,11 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
             "Content-Type": "application/json",
             "Accept": "text/event-stream",
         }
-        body = {"messages": [{"role": "user", "content": prompt}], "stream_steps": True, "stream_tokens": True}
+        body = {
+            "messages": [{"role": "user", "content": prompt}],
+            "stream_steps": True,
+            "stream_tokens": True
+        }
 
         response_text = ""
         try:
