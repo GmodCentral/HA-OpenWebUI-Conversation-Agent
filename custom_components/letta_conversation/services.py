@@ -1,11 +1,15 @@
+# custom_components/letta_conversation/services.py
+
 import aiohttp
 import json
 import logging
+import voluptuous as vol
 
 from homeassistant.const import CONF_URL, CONF_PASSWORD, CONF_API_KEY
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.components.conversation import AbstractConversationAgent, ConversationResult
+from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, CONF_AGENT_ID
 
@@ -72,10 +76,11 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
 
         return {"response": response_text}
 
+    schema = vol.Schema({vol.Required("prompt"): cv.string})
     hass.services.async_register(
         DOMAIN,
         "query_letta",
         query_letta,
-        schema={"prompt": str},
+        schema=schema,
         supports_response=SupportsResponse.ONLY,
     )
