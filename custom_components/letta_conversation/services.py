@@ -1,5 +1,3 @@
-# custom_components/letta_conversation/services.py
-
 import aiohttp
 import json
 import logging
@@ -24,7 +22,6 @@ class LettaConversationAgent(AbstractConversationAgent):
         return ["en"]
 
     async def async_process(self, user_input) -> ConversationResult:
-        """Process user input and return Letta's response."""
         result = await self.hass.services.async_call(
             DOMAIN,
             "query_letta",
@@ -34,7 +31,6 @@ class LettaConversationAgent(AbstractConversationAgent):
         )
         response = result[0].get("response", "")
         return ConversationResult(response)
-
 
 def register_services(hass: HomeAssistant, config: dict) -> None:
     """Register the `query_letta` service."""
