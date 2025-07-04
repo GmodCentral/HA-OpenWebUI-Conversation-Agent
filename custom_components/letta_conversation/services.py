@@ -4,7 +4,7 @@ import logging
 import voluptuous as vol
 
 from homeassistant.const import CONF_URL, CONF_PASSWORD, CONF_API_KEY
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.components.conversation import AbstractConversationAgent, ConversationResult
 from homeassistant.helpers import config_validation as cv
@@ -87,4 +87,5 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
         "query_letta",
         query_letta,
         schema=schema,
+        supports_response=SupportsResponse.ONLY,
     )
