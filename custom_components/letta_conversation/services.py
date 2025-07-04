@@ -1,3 +1,5 @@
+# custom_components/letta_conversation/services.py
+
 import aiohttp
 import json
 import logging
@@ -27,7 +29,7 @@ class LettaConversationAgent(AbstractConversationAgent):
         self.config = config
 
     async def async_process(self, user_input) -> ConversationResult:
-        # Call our query service
+        """Process user input and return Letta's response."""
         result = await self.hass.services.async_call(
             DOMAIN,
             "query_letta",
@@ -35,16 +37,17 @@ class LettaConversationAgent(AbstractConversationAgent):
             blocking=True,
             return_response=True,
         )
-        # Normalize result
+
+        # Normalize service result
+        raw = ""
         if isinstance(result, list) and result:
             raw = result[0].get("response", "")
         elif isinstance(result, dict):
             raw = result.get("response", "")
-        else:
-            raw = ""
-        # Wrap in ConversationResponse for HA
+
+        # Wrap text in ConversationResponse so HA can serialize it
         resp = ConversationResponse(text=raw)
-        return ConversationResult(response=resp)
+        return ConversationResult(resp)
 
 def register_services(hass: HomeAssistant, config: dict) -> None:
     """Register the `query_letta` service."""
@@ -68,8 +71,7 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, headers=headers, json=body) as resp:
-                    if resp.status != 200:
-                        raise HomeAssistantError(f"Letta API error: {resp.status}")
+                    resp.raise_for_status()
                     async for chunk in resp.content:
                         line = chunk.decode().strip()
                         if not line.startswith("data: "):
