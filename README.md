@@ -7,14 +7,19 @@ Integrates Letta AI into Home Assistant as a conversation agent.
 - Control Home Assistant devices via Letta
 
 ## Installation
-1. Copy `custom_components/letta_conversation` to your HA `custom_components` folder.
-2. Restart Home Assistant.
-3. In Configuration → Integrations, add the Letta Conversation integration.
+### HACS
+1. Add this repository to HACS as a custom repository (Integration).
+2. Install "Letta Conversation" via HACS.
+3. Restart Home Assistant.
 
-## Configuration Options
-| Option    | Description                              |
-|-----------|------------------------------------------|
-| URL       | Base URL (e.g. https://letta.avcompute.com) |
-| Agent ID  | Your agent identifier                    |
-| Password  | X-BARE-PASSWORD                          |
-| Auth Key  | Authorization Bearer token               |
+### YAML Configuration (optional)
+Add the following to your `configuration.yaml`:
+```yaml
+letta_conversation:
+  url: https://letta.avcompute.com
+  agent_id: agent-83fb49e0-29d8-4faa-84f5-22549782042f
+  password: Admin980845-
+  api_key: Admin980845-
+```
+
+Restart Home Assistant. Then configure via UI if needed or use services directly.

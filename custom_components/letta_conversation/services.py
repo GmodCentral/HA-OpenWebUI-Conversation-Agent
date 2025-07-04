@@ -5,11 +5,7 @@ import logging
 from homeassistant.const import CONF_URL, CONF_PASSWORD, CONF_API_KEY
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.components.conversation import (
-    AbstractConversationAgent,
-    ConversationResult,
-    ConversationResultType,
-)
+from homeassistant.components.conversation import AbstractConversationAgent, ConversationResult
 
 from .const import DOMAIN, CONF_AGENT_ID
 
@@ -21,7 +17,6 @@ class LettaConversationAgent(AbstractConversationAgent):
         self.config = config
 
     async def async_process(self, user_input) -> ConversationResult:
-        # Call our own service to get the streamed response
         result = await self.hass.services.async_call(
             DOMAIN,
             "query_letta",
@@ -29,9 +24,8 @@ class LettaConversationAgent(AbstractConversationAgent):
             blocking=True,
             return_response=True,
         )
-        # service returns a list of dicts
-        response_text = result[0].get("response", "")
-        return ConversationResult(response_text, ConversationResultType.RESPONSE)
+        response = result[0].get("response", "")
+        return ConversationResult(response)
 
 def register_services(hass: HomeAssistant, config: dict) -> None:
     async def query_letta(call: ServiceCall) -> dict:
@@ -44,11 +38,7 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
             "Content-Type": "application/json",
             "Accept": "text/event-stream",
         }
-        body = {
-            "messages": [{"role": "user", "content": prompt}],
-            "stream_steps": True,
-            "stream_tokens": True,
-        }
+        body = {"messages": [{"role": "user", "content": prompt}], "stream_steps": True, "stream_tokens": True}
 
         response_text = ""
         try:
@@ -65,9 +55,7 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
                             break
                         msg = json.loads(data)
                         response_text += msg.get("reasoning", msg.get("content", ""))
-
             _LOGGER.debug("Letta response: %s", response_text)
-
         except Exception as e:
             raise HomeAssistantError(f"Error talking to Letta: {e}")
 

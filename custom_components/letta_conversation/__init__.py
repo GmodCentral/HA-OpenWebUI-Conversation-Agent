@@ -12,7 +12,6 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.data.setdefault(DOMAIN, {})
-    # Import YAML config if present
     if DOMAIN in config:
         entry_data = {**config[DOMAIN]}
         await hass.async_create_task(
@@ -25,10 +24,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
-    # Store config and register services
     hass.data[DOMAIN][entry.entry_id] = entry.data
     register_services(hass, entry.data)
-    # Expose as a conversation agent
     conversation.async_set_agent(
         hass,
         DOMAIN,
