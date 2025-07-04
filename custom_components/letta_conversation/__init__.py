@@ -1,3 +1,5 @@
+# custom_components/letta_conversation/__init__.py
+
 import logging
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
@@ -26,10 +28,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = entry.data
     register_services(hass, entry.data)
-    # Register Letta as a conversation agent under this entry_id
+
+    # Pass the full entry here, not just its ID
     conversation.async_set_agent(
         hass,
-        entry.entry_id,
+        entry,
         LettaConversationAgent(hass, entry.data)
     )
     return True
