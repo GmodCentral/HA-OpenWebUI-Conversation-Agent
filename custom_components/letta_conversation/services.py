@@ -7,6 +7,7 @@ from homeassistant.const import CONF_URL, CONF_PASSWORD, CONF_API_KEY
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.components.conversation import AbstractConversationAgent, ConversationResult
+from homeassistant.components.conversation.models import ConversationResponse
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, CONF_AGENT_ID
@@ -23,7 +24,7 @@ class LettaConversationAgent(AbstractConversationAgent):
         self.config = config
 
     async def async_process(self, user_input) -> ConversationResult:
-        """Process user input and return Letta's response."""
+        """Process user input and return Letta's response wrapped for HA."""
         result = await self.hass.services.async_call(
             DOMAIN,
             "query_letta",
@@ -39,7 +40,9 @@ class LettaConversationAgent(AbstractConversationAgent):
         elif isinstance(result, dict):
             raw = result.get("response", "")
 
-        return ConversationResult(raw)
+        # Wrap text in ConversationResponse so HA can serialize it
+        resp = ConversationResponse(text=raw)
+        return ConversationResult(response=resp)
 
 
 def register_services(hass: HomeAssistant, config: dict) -> None:
