@@ -1,5 +1,3 @@
-# custom_components/letta_conversation/services.py
-
 import aiohttp
 import json
 import logging
@@ -34,8 +32,14 @@ class LettaConversationAgent(AbstractConversationAgent):
             blocking=True,
             return_response=True,
         )
-        response = result[0].get("response", "")
+        # Handle service response, could be list or dict
+        response = ""
+        if isinstance(result, list) and result:
+            response = result[0].get("response", "")
+        elif isinstance(result, dict):
+            response = result.get("response", "")
         return ConversationResult(response)
+
 
 def register_services(hass: HomeAssistant, config: dict) -> None:
     """Register the `query_letta` service."""
