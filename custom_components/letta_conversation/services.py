@@ -79,7 +79,7 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
                         if data == "[DONE]":
                             break
                         msg = json.loads(data)
-                        response_text += msg.get("reasoning", msg.get("content", ""))
+                        response_text += msg.get("content", "")
             _LOGGER.debug("Letta response: %s", response_text)
         except Exception as e:
             raise HomeAssistantError(f"Error talking to Letta: {e}")
