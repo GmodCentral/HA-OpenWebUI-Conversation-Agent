@@ -1,5 +1,3 @@
-# custom_components/letta_conversation/services.py
-
 import aiohttp
 import json
 import logging
@@ -8,11 +6,7 @@ import voluptuous as vol
 from homeassistant.const import CONF_URL, CONF_PASSWORD, CONF_API_KEY
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.components.conversation import (
-    AbstractConversationAgent,
-    ConversationResult,
-    ConversationResponse,
-)
+from homeassistant.components.conversation import AbstractConversationAgent, ConversationResult
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, CONF_AGENT_ID
@@ -45,9 +39,8 @@ class LettaConversationAgent(AbstractConversationAgent):
         elif isinstance(result, dict):
             raw = result.get("response", "")
 
-        # Wrap text in ConversationResponse so HA can serialize it
-        resp = ConversationResponse(text=raw)
-        return ConversationResult(resp)
+        return ConversationResult(raw)
+
 
 def register_services(hass: HomeAssistant, config: dict) -> None:
     """Register the `query_letta` service."""
@@ -71,7 +64,8 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, headers=headers, json=body) as resp:
-                    resp.raise_for_status()
+                    if resp.status != 200:
+                        raise HomeAssistantError(f"Letta API error: {resp.status}")
                     async for chunk in resp.content:
                         line = chunk.decode().strip()
                         if not line.startswith("data: "):
