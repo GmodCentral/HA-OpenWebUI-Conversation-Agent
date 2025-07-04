@@ -1,5 +1,3 @@
-# custom_components/letta_conversation/__init__.py
-
 import logging
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
@@ -12,24 +10,23 @@ from .services import register_services, LettaConversationAgent
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     hass.data.setdefault(DOMAIN, {})
+    # Import YAML config if present
     if DOMAIN in config:
-        entry_data = {**config[DOMAIN]}
-        await hass.async_create_task(
+        hass.async_create_task(
             hass.config_entries.flow.async_init(
                 DOMAIN,
                 context={"source": config_entries.SOURCE_IMPORT},
-                data=entry_data,
+                data=config[DOMAIN],
             )
         )
     return True
 
-async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
     hass.data[DOMAIN][entry.entry_id] = entry.data
     register_services(hass, entry.data)
-
-    # Pass the full entry here, not just its ID
+    # Register Letta as a conversation agent (pass the ConfigEntry object)
     conversation.async_set_agent(
         hass,
         entry,
@@ -37,7 +34,7 @@ async def async_setup_entry(hass: HomeAssistant, entry) -> bool:
     )
     return True
 
-async def async_unload_entry(hass, entry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: config_entries.ConfigEntry) -> bool:
     hass.services.async_remove(DOMAIN, "query_letta")
     hass.data[DOMAIN].pop(entry.entry_id)
     return True

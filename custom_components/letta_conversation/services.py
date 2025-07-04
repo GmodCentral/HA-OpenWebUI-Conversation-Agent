@@ -12,16 +12,17 @@ from .const import DOMAIN, CONF_AGENT_ID
 _LOGGER = logging.getLogger(__name__)
 
 class LettaConversationAgent(AbstractConversationAgent):
-    def __init__(self, hass: HomeAssistant, config: dict):
-        self.hass = hass
-        self.config = config
-
     @property
     def supported_languages(self) -> list[str]:
         """Return list of supported languages."""
         return ["en"]
 
+    def __init__(self, hass: HomeAssistant, config: dict) -> None:
+        self.hass = hass
+        self.config = config
+
     async def async_process(self, user_input) -> ConversationResult:
+        """Process user input and return Letta's response."""
         result = await self.hass.services.async_call(
             DOMAIN,
             "query_letta",
