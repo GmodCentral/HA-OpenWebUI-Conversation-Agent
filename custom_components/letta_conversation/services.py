@@ -14,6 +14,7 @@ from .const import DOMAIN, CONF_AGENT_ID
 
 _LOGGER = logging.getLogger(__name__)
 
+
 class LettaConversationAgent(AbstractConversationAgent):
     @property
     def supported_languages(self) -> list[str]:
@@ -47,22 +48,21 @@ class LettaConversationAgent(AbstractConversationAgent):
 
         return ConversationResult(response=resp, conversation_id=user_input.conversation_id)
 
+
 def register_services(hass: HomeAssistant, config: dict) -> None:
     """Register the `query_letta` service."""
     async def query_letta(call: ServiceCall) -> dict:
         prompt = call.data["prompt"]
-        url = f"{config[CONF_URL]}/v1/agents/{config[CONF_AGENT_ID]}/messages/stream"
+        # Use non‐streaming endpoint
+        url = f"{config[CONF_URL]}/v1/agents/{config[CONF_AGENT_ID]}/messages"
 
         headers = {
             "Authorization": f"Bearer {config[CONF_API_KEY]}",
             "X-BARE-PASSWORD": config[CONF_PASSWORD],
             "Content-Type": "application/json",
-            "Accept": "text/event-stream",
         }
         body = {
-            "messages": [{"role": "user", "content": prompt}],
-            "stream_steps": True,
-            "stream_tokens": True,
+            "messages": [{"role": "user", "content": prompt}]
         }
 
         response_text = ""
@@ -71,18 +71,15 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
                 async with session.post(url, headers=headers, json=body) as resp:
                     if resp.status != 200:
                         raise HomeAssistantError(f"Letta API error: {resp.status}")
-                    async for chunk in resp.content:
-                        line = chunk.decode().strip()
-                        if not line.startswith("data: "):
-                            continue
-                        data = line[6:]
-                        if data == "[DONE]":
-                            break
-                        msg = json.loads(data)
-                        response_text += msg.get("content", "")
+                    data = await resp.json()
+                    for msg in data.get("messages", []):
+                        # accumulate any assistant message content
+                        if "content" in msg:
+                            response_text += msg["content"]
+
             _LOGGER.debug("Letta response: %s", response_text)
         except Exception as e:
-            raise HomeAssistantError(f"Error talking to Letta: {e}")
+            raise HomeAssistantError(f"Error talking to Letta: {e}") from e
 
         return {"response": response_text}
 
