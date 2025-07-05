@@ -62,7 +62,7 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
             "Content-Type": "application/json",
         }
         body = {
-            "messages": [{"role": "user", "content": prompt + " --Sent from HA Voice"}]
+            "messages": [{"role": "user", "content": prompt}]
         }
 
         response_text = ""
