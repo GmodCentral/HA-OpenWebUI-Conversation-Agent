@@ -24,21 +24,20 @@ class LettaConversationAgent(AbstractConversationAgent):
     def __init__(self, hass: HomeAssistant, config: dict) -> None:
         self.hass = hass
         self.config = config
-        # List of media_player entities to send TTS to
         self._tts_speakers: list[str] = config.get(CONF_TTS_SPEAKERS, [])
-        # Keep unsubscribe callbacks here so we only listen once per speaker
+        # Hold unsubscribe callbacks so we only listen once per speaker
         self._followup_unsubs: dict[str, callable] = {}
 
     async def async_process(self, user_input) -> ConversationResult:
         """Process user input, speak via TTS if voice, and handle follow-up triggers."""
-        # ── Detect voice vs chat ────────────────────────────────
+        # ── Detect voice vs chat ───────────────────────────────
         src = getattr(user_input, "source", "") or ""
         is_voice = src.lower() not in ("text", "")
         prompt = user_input.text
         if is_voice:
             prompt = "[fromvoice:true] " + prompt
 
-        # ── Query Letta backend ──────────────────────────────────
+        # ── Query the Letta backend ────────────────────────────
         result = await self.hass.services.async_call(
             DOMAIN,
             "query_letta",
@@ -53,12 +52,12 @@ class LettaConversationAgent(AbstractConversationAgent):
             raw = result.get("response", "") or ""
         _LOGGER.debug("Letta raw response: %s", raw)
 
-        # ── Flags & cleanup ─────────────────────────────────────
+        # ── Flags & cleanup ────────────────────────────────────
         followup  = "[followup:true]" in raw
         fromvoice = "[fromvoice:true]"  in raw
         cleaned = raw.replace("[followup:true]", "").replace("[fromvoice:true]", "").strip()
 
-        # ── Speak back on configured speakers ────────────────────
+        # ── Speak back on configured speakers ───────────────────
         if is_voice and self._tts_speakers and cleaned:
             for speaker in self._tts_speakers:
                 try:
@@ -75,10 +74,10 @@ class LettaConversationAgent(AbstractConversationAgent):
                 except Exception as e:
                     _LOGGER.error("Letta: failed TTS on %s: %s", speaker, e)
 
-        # ── State-based follow-up trigger ────────────────────────
+        # ── State-based follow-up trigger ───────────────────────
         if followup and fromvoice and self._tts_speakers:
             for speaker in self._tts_speakers:
-                # Only subscribe once per speaker
+                # subscribe only once
                 if speaker in self._followup_unsubs:
                     continue
 
@@ -87,11 +86,15 @@ class LettaConversationAgent(AbstractConversationAgent):
                 def _state_listener(entity_id, old, new):
                     old_state = old.state if old else None
                     new_state = new.state if new else None
-                    # Trigger when it WAS playing/on and now is not
+                    # when it WAS playing/on and now is not
                     if old_state in ("playing", "on") and new_state not in ("playing", "on"):
                         _LOGGER.debug("%s stopped – firing follow-up", entity_id)
-                        self.hass.bus.async_fire("letta_conversation_followup")
-                        # Cleanup listener
+                        # schedule the event on the main loop
+                        self.hass.loop.call_soon_threadsafe(
+                            self.hass.bus.async_fire,
+                            "letta_conversation_followup"
+                        )
+                        # unsubscribe listener
                         unsub = self._followup_unsubs.pop(entity_id, None)
                         if unsub:
                             unsub()
@@ -103,9 +106,10 @@ class LettaConversationAgent(AbstractConversationAgent):
                 )
                 self._followup_unsubs[speaker] = unsub
 
-        # ── Return cleaned response to HA conversation pipeline ───
+        # ── Return cleaned response to the conversation pipeline ──
         resp = IntentResponse(language=user_input.language, intent=None)
         resp.async_set_speech(cleaned)
+
         return ConversationResult(
             response=resp,
             conversation_id=user_input.conversation_id
@@ -117,15 +121,14 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
     async def query_letta(call: ServiceCall) -> dict:
         prompt = call.data["prompt"]
         url = f"{config[CONF_URL]}/v1/agents/{config[CONF_AGENT_ID]}/messages"
-
         headers = {
             "Authorization": f"Bearer {config[CONF_API_KEY]}",
             "X-BARE-PASSWORD": config[CONF_PASSWORD],
             "Content-Type": "application/json",
         }
         body = {"messages": [{"role": "user", "content": prompt}]}
-
         response_text = ""
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, headers=headers, json=body) as resp:
