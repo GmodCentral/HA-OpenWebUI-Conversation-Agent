@@ -9,6 +9,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.components.conversation import AbstractConversationAgent, ConversationResult
 from homeassistant.helpers.intent import IntentResponse
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.event import async_call_later
 
 from .const import DOMAIN, CONF_AGENT_ID
 
@@ -51,7 +52,7 @@ class LettaConversationAgent(AbstractConversationAgent):
             raw = result.get("response", "")
 
         # ─── New Detection & Cleaning Logic ─────────────────────────────────
-        followup  = "[followup:true]" in raw
+        followup  = "[followup:true]"   in raw
         fromvoice = "[fromvoice:true]"  in raw
 
         # Clean out the markers so they’re not spoken aloud
@@ -62,10 +63,18 @@ class LettaConversationAgent(AbstractConversationAgent):
             .strip()
         )
 
-        # Trigger Home Assistant event if both flags present
+        # Schedule follow-up mic event if both flags present (after speaking)
         if followup and fromvoice:
-            _LOGGER.debug("Letta: triggering follow-up mic event")
-            self.hass.bus.async_fire("letta_conversation_followup")
+            _LOGGER.debug("Letta: scheduling follow-up mic event")
+            # Estimate ~0.5s per word, minimum 2s
+            word_count = len(cleaned.split())
+            delay = max(2, word_count * 0.5)
+            _LOGGER.debug("Letta: will fire follow-up in %.1f seconds", delay)
+            async_call_later(
+                self.hass,
+                delay,
+                lambda _: self.hass.bus.async_fire("letta_conversation_followup")
+            )
         # ─────────────────────────────────────────────────────────────────────
 
         # Wrap in IntentResponse so HA can serialize it
