@@ -70,7 +70,7 @@ class LettaConversationAgent(AbstractConversationAgent):
             _LOGGER.debug("Letta: scheduling follow-up mic event")
             # Estimate speech duration: ~0.5s per word (min 2s)
             word_count = len(cleaned.split())
-            delay = max(2, word_count * 0.5)
+            delay = max(1, word_count * 0.3)
             _LOGGER.debug("Letta: will schedule follow-up in %.1f seconds", delay)
             def _fire_followup(now=None):
                 # Ensure fire runs on the main loop thread
