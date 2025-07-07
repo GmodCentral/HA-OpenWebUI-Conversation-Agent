@@ -4,14 +4,14 @@ import logging
 import voluptuous as vol
 
 from homeassistant.const import CONF_URL, CONF_PASSWORD, CONF_API_KEY
-from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse, Context
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.components.conversation import AbstractConversationAgent, ConversationResult
 from homeassistant.helpers.intent import IntentResponse
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.event import async_call_later
+from homeassistant.helpers.event import async_track_state_change_event
 
-from .const import DOMAIN, CONF_AGENT_ID
+from .const import DOMAIN, CONF_AGENT_ID, CONF_TTS_SPEAKERS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -25,15 +25,15 @@ class LettaConversationAgent(AbstractConversationAgent):
         self.config = config
 
     async def async_process(self, user_input) -> ConversationResult:
-        """Process user input and return Letta's response."""
-        # Detect voice vs. chat and tag prompt accordingly
+        """Process user input and return Letta's response, then handle TTS and follow-up."""
+        # Detect voice vs. chat
         src = getattr(user_input, "source", "").lower()
         is_voice = src not in ("text", "", None)
         prompt = user_input.text
         if is_voice:
             prompt = "[fromvoice:true] " + prompt
 
-        # Call the query service
+        # Query Letta backend
         result = await self.hass.services.async_call(
             DOMAIN,
             "query_letta",
@@ -42,46 +42,61 @@ class LettaConversationAgent(AbstractConversationAgent):
             return_response=True,
         )
 
-        # Normalize service result
+        # Extract raw response
         raw = ""
         if isinstance(result, list) and result:
-            raw = result[0].get("response", "")
+            raw = result[0].get("response", "") or ""
         elif isinstance(result, dict):
-            raw = result.get("response", "")
+            raw = result.get("response", "") or ""
 
-        # Debug logging for source, raw response, and flags
+        # Detect markers
         followup  = "[followup:true]" in raw
-        fromvoice = "[fromvoice:true]"  in raw
-        _LOGGER.debug(
-            "Letta.async_process: source=%r, raw=%r, followup=%s, fromvoice=%s",
-            src, raw, followup, fromvoice
-        )
+        fromvoice = "[fromvoice:true]" in raw
 
-        # Clean out the markers so they’re not spoken aloud
-        cleaned = (
-            raw
-            .replace("[followup:true]", "")
-            .replace("[fromvoice:true]", "")
-            .strip()
-        )
+        # Clean speech text
+        speech = raw.replace("[followup:true]", "").replace("[fromvoice:true]", "").strip()
 
-        # Schedule follow-up mic event if both flags present (after speech finishes)
-        if followup and fromvoice:
-            _LOGGER.debug("Letta: scheduling follow-up mic event")
-            # Estimate speech duration: ~0.5s per word (min 2s)
-            word_count = len(cleaned.split())
-            delay = max(1, word_count * 0.3)
-            _LOGGER.debug("Letta: will schedule follow-up in %.1f seconds", delay)
-            def _fire_followup(now=None):
-                # Ensure fire runs on the main loop thread
-                self.hass.loop.call_soon_threadsafe(
-                    self.hass.bus.async_fire, "letta_conversation_followup"
-                )
-            async_call_later(self.hass, delay, _fire_followup)
+        # Handle TTS playback and follow-up
+        tts_speakers = self.config.get(CONF_TTS_SPEAKERS, [])
+        if followup and fromvoice and tts_speakers:
+            _LOGGER.debug("Letta: sending TTS to %s", tts_speakers)
+            # Create context to filter our TTS
+            tts_ctx = Context()
+            # Call TTS speak
+            await self.hass.services.async_call(
+                "tts",
+                "speak",
+                {
+                    "entity_id": tts_speakers,
+                    "message": speech,
+                },
+                blocking=False,
+                context=tts_ctx,
+            )
+            _LOGGER.debug("Letta: subscribing to TTS completion for context %s", tts_ctx.id)
+            # Subscribe to state change only for our speakers and context
+            def _listener(event):
+                old = event.data.get("old_state")
+                new = event.data.get("new_state")
+                if (
+                    old and new
+                    and old.state == "playing"
+                    and new.state in ("idle", "off")
+                    and event.context.id == tts_ctx.id
+                ):
+                    _LOGGER.debug("Letta: TTS completed, firing follow-up")
+                    unsub()
+                    self.hass.bus.async_fire("letta_conversation_followup")
+            unsub = async_track_state_change_event(self.hass, tts_speakers, _listener)
+        else:
+            # No configured speakers or no followup, just set speech
+            _LOGGER.debug("Letta: using conversation TTS for response")
+            # Use built-in conversation TTS
+            speech = speech
 
-        # Wrap in IntentResponse so HA can serialize it
+        # Wrap in IntentResponse
         resp = IntentResponse(language=user_input.language, intent=None)
-        resp.async_set_speech(cleaned)
+        resp.async_set_speech(speech)
 
         return ConversationResult(
             response=resp,
@@ -110,7 +125,7 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
                     data = await resp.json()
                     for msg in data.get("messages", []):
                         if "content" in msg:
-                            response_text += msg["content"]
+                            response_text += msg["content"] or ""
             _LOGGER.debug("Letta response: %s", response_text)
         except Exception as e:
             raise HomeAssistantError(f"Error talking to Letta: {e}") from e
