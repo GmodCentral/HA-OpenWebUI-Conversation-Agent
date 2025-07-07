@@ -26,11 +26,19 @@ class LettaConversationAgent(AbstractConversationAgent):
 
     async def async_process(self, user_input) -> ConversationResult:
         """Process user input and return Letta's response."""
+        # ─── Detect voice vs. chat and tag prompt accordingly ──────────────────
+        src = getattr(user_input, "source", "").lower()
+        is_voice = src != "text"
+        prompt = user_input.text
+        if is_voice:
+            prompt = "[fromvoice:true] " + prompt
+        # ─────────────────────────────────────────────────────────────────────
+
         # Call the query service
         result = await self.hass.services.async_call(
             DOMAIN,
             "query_letta",
-            {"prompt": user_input.text},
+            {"prompt": prompt},
             blocking=True,
             return_response=True,
         )
@@ -58,7 +66,7 @@ class LettaConversationAgent(AbstractConversationAgent):
         if followup and fromvoice:
             _LOGGER.debug("Letta: triggering follow-up mic event")
             self.hass.bus.async_fire("letta_conversation_followup")
-        # ─────────────────────────────────────────────────────────────────
+        # ─────────────────────────────────────────────────────────────────────
 
         # Wrap in IntentResponse so HA can serialize it
         resp = IntentResponse(language=user_input.language, intent=None)
