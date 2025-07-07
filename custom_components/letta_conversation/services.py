@@ -71,12 +71,13 @@ class LettaConversationAgent(AbstractConversationAgent):
             # Estimate speech duration: ~0.5s per word (min 2s)
             word_count = len(cleaned.split())
             delay = max(2, word_count * 0.5)
-            _LOGGER.debug("Letta: will fire follow-up event in %.1f seconds", delay)
-            async_call_later(
-                self.hass,
-                delay,
-                lambda _: self.hass.bus.async_fire("letta_conversation_followup")
-            )
+            _LOGGER.debug("Letta: will schedule follow-up in %.1f seconds", delay)
+            def _fire_followup(now=None):
+                # Ensure fire runs on the main loop thread
+                self.hass.loop.call_soon_threadsafe(
+                    self.hass.bus.async_fire, "letta_conversation_followup"
+                )
+            async_call_later(self.hass, delay, _fire_followup)
 
         # Wrap in IntentResponse so HA can serialize it
         resp = IntentResponse(language=user_input.language, intent=None)
