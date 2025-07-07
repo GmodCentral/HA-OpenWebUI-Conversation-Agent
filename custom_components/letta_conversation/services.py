@@ -42,18 +42,38 @@ class LettaConversationAgent(AbstractConversationAgent):
         elif isinstance(result, dict):
             raw = result.get("response", "")
 
+        # ─── New Detection & Cleaning Logic ─────────────────────────────────
+        followup  = "[followup:true]" in raw
+        fromvoice = "[fromvoice:true]"  in raw
+
+        # Clean out the markers so they’re not spoken aloud
+        cleaned = (
+            raw
+            .replace("[followup:true]", "")
+            .replace("[fromvoice:true]", "")
+            .strip()
+        )
+
+        # Trigger Home Assistant event if both flags present
+        if followup and fromvoice:
+            _LOGGER.debug("Letta: triggering follow-up mic event")
+            self.hass.bus.async_fire("letta_conversation_followup")
+        # ─────────────────────────────────────────────────────────────────
+
         # Wrap in IntentResponse so HA can serialize it
         resp = IntentResponse(language=user_input.language, intent=None)
-        resp.async_set_speech(raw)
+        resp.async_set_speech(cleaned)
 
-        return ConversationResult(response=resp, conversation_id=user_input.conversation_id)
+        return ConversationResult(
+            response=resp,
+            conversation_id=user_input.conversation_id
+        )
 
 
 def register_services(hass: HomeAssistant, config: dict) -> None:
     """Register the `query_letta` service."""
     async def query_letta(call: ServiceCall) -> dict:
         prompt = call.data["prompt"]
-        # Use non‐streaming endpoint
         url = f"{config[CONF_URL]}/v1/agents/{config[CONF_AGENT_ID]}/messages"
 
         headers = {
@@ -61,9 +81,7 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
             "X-BARE-PASSWORD": config[CONF_PASSWORD],
             "Content-Type": "application/json",
         }
-        body = {
-            "messages": [{"role": "user", "content": prompt}]
-        }
+        body = {"messages": [{"role": "user", "content": prompt}]}
 
         response_text = ""
         try:
@@ -73,7 +91,6 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
                         raise HomeAssistantError(f"Letta API error: {resp.status}")
                     data = await resp.json()
                     for msg in data.get("messages", []):
-                        # accumulate any assistant message content
                         if "content" in msg:
                             response_text += msg["content"]
 
