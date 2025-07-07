@@ -2,7 +2,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import CONF_URL, CONF_PASSWORD, CONF_API_KEY
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers import selector
+from homeassistant.helpers.selector import EntitySelector
 
 from .const import DOMAIN, CONF_AGENT_ID, CONF_TTS_SPEAKERS
 
@@ -20,8 +20,8 @@ class LettaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             vol.Required(CONF_AGENT_ID): cv.string,
             vol.Required(CONF_PASSWORD): cv.string,
             vol.Required(CONF_API_KEY): cv.string,
-            vol.Optional(CONF_TTS_SPEAKERS, default=[]): selector.EntitySelector(
-                selector={"entity": {"domain": "media_player"}},
+            vol.Optional(CONF_TTS_SPEAKERS, default=[]): EntitySelector(
+                entity={"domain": "media_player"},
                 multiple=True
             ),
         })
