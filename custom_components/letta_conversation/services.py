@@ -15,7 +15,6 @@ from .const import DOMAIN, CONF_AGENT_ID
 
 _LOGGER = logging.getLogger(__name__)
 
-
 class LettaConversationAgent(AbstractConversationAgent):
     @property
     def supported_languages(self) -> list[str]:
@@ -27,13 +26,12 @@ class LettaConversationAgent(AbstractConversationAgent):
 
     async def async_process(self, user_input) -> ConversationResult:
         """Process user input and return Letta's response."""
-        # ─── Detect voice vs. chat and tag prompt accordingly ──────────────────
+        # Detect voice vs. chat and tag prompt accordingly
         src = getattr(user_input, "source", "").lower()
-        is_voice = src != "text"
+        is_voice = src not in ("text", "", None)
         prompt = user_input.text
         if is_voice:
             prompt = "[fromvoice:true] " + prompt
-        # ─────────────────────────────────────────────────────────────────────
 
         # Call the query service
         result = await self.hass.services.async_call(
@@ -51,31 +49,24 @@ class LettaConversationAgent(AbstractConversationAgent):
         elif isinstance(result, dict):
             raw = result.get("response", "")
 
-        # ─── New Detection & Cleaning Logic ─────────────────────────────────
-        followup  = "[followup:true]"   in raw
+        # New Detection & Cleaning Logic
+        followup  = "[followup:true]" in raw
         fromvoice = "[fromvoice:true]"  in raw
 
-        # Clean out the markers so they’re not spoken aloud
-        cleaned = (
-            raw
-            .replace("[followup:true]", "")
-            .replace("[fromvoice:true]", "")
-            .strip()
-        )
+        cleaned = raw.replace("[followup:true]", "").replace("[fromvoice:true]", "").strip()
 
-        # Schedule follow-up mic event if both flags present (after speaking)
+        # Schedule follow-up mic event if both flags present (after speech finishes)
         if followup and fromvoice:
             _LOGGER.debug("Letta: scheduling follow-up mic event")
-            # Estimate ~0.5s per word, minimum 2s
+            # Estimate speech duration: ~0.5s per word (min 2s)
             word_count = len(cleaned.split())
             delay = max(2, word_count * 0.5)
-            _LOGGER.debug("Letta: will fire follow-up in %.1f seconds", delay)
+            _LOGGER.debug("Letta: will fire follow-up event in %.1f seconds", delay)
             async_call_later(
                 self.hass,
                 delay,
                 lambda _: self.hass.bus.async_fire("letta_conversation_followup")
             )
-        # ─────────────────────────────────────────────────────────────────────
 
         # Wrap in IntentResponse so HA can serialize it
         resp = IntentResponse(language=user_input.language, intent=None)
@@ -85,7 +76,6 @@ class LettaConversationAgent(AbstractConversationAgent):
             response=resp,
             conversation_id=user_input.conversation_id
         )
-
 
 def register_services(hass: HomeAssistant, config: dict) -> None:
     """Register the `query_letta` service."""
@@ -110,7 +100,6 @@ def register_services(hass: HomeAssistant, config: dict) -> None:
                     for msg in data.get("messages", []):
                         if "content" in msg:
                             response_text += msg["content"]
-
             _LOGGER.debug("Letta response: %s", response_text)
         except Exception as e:
             raise HomeAssistantError(f"Error talking to Letta: {e}") from e
