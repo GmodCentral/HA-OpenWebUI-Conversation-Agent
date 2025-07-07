@@ -49,11 +49,21 @@ class LettaConversationAgent(AbstractConversationAgent):
         elif isinstance(result, dict):
             raw = result.get("response", "")
 
-        # New Detection & Cleaning Logic
+        # Debug logging for source, raw response, and flags
         followup  = "[followup:true]" in raw
         fromvoice = "[fromvoice:true]"  in raw
+        _LOGGER.debug(
+            "Letta.async_process: source=%r, raw=%r, followup=%s, fromvoice=%s",
+            src, raw, followup, fromvoice
+        )
 
-        cleaned = raw.replace("[followup:true]", "").replace("[fromvoice:true]", "").strip()
+        # Clean out the markers so they’re not spoken aloud
+        cleaned = (
+            raw
+            .replace("[followup:true]", "")
+            .replace("[fromvoice:true]", "")
+            .strip()
+        )
 
         # Schedule follow-up mic event if both flags present (after speech finishes)
         if followup and fromvoice:
